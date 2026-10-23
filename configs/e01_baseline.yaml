@@ -1,0 +1,27 @@
+experiment_id: E01
+hypothesis: >
+  O FaceNet (InceptionResnetV1, pesos vggface2) pre-treinado, sem fine-tuning, ja gera
+  embeddings que separam pessoas do LFW. Esperamos EER baixo com similaridade de cosseno e
+  resultado parecido com distancia euclidiana (embeddings normalizados).
+seed: 42
+dataset:
+  name: lfw
+  min_faces_per_person: 10
+  crop: 144          # recorte central (pixels) da imagem 250x250 do LFW
+  image_size: 160    # entrada do modelo
+model:
+  name: facenet_inception_resnet_v1
+  pretrained: vggface2
+  batch_size: 32
+  device: cpu
+split:
+  fractions: [0.6, 0.2, 0.2]   # treino / validacao / teste, por IDENTIDADE
+comparison:
+  metrics: [cosine, euclidean]
+  n_val_pairs: 4000
+  n_test_pairs: 4000
+open_set:
+  n_enroll: 3          # fotos usadas para "cadastrar" cada pessoa conhecida
+  known_fraction: 0.5  # metade das pessoas do teste e conhecida, a outra e desconhecida
+output_dir: results
+cache_dir: data/cache
