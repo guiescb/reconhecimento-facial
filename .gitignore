@@ -1,0 +1,35 @@
+# ===== DADOS PRIVADOS (topicos 17-20 e 25 do enunciado) =====
+# Crie este arquivo ANTES do primeiro commit. Adicionar depois nao remove o que ja foi enviado.
+data/private/
+data/teste_local/
+faces/
+embeddings/
+checkpoints/private/
+consent/
+results/private/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Pesos/checkpoints (podem incorporar dados biometricos)
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+weights.bin
+
+# Datasets publicos: nao redistribuir; cada pessoa baixa da fonte oficial
+data/*
+!data/README.md
+
+# Ambiente e lixo
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.env
+.DS_Store

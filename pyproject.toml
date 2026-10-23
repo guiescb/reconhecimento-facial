@@ -1,0 +1,9 @@
+[project]
+name = "facerec"
+version = "0.1.0"
+description = "Reconhecimento facial - trabalho academico de Inteligencia Artificial (UFMS)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

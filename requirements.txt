@@ -1,0 +1,14 @@
+# Versoes exatas devem ser registradas apos o ambiente estar funcionando
+# (rode `pip freeze > requirements.lock.txt`) - topico 34 (reprodutibilidade).
+numpy
+scipy
+scikit-learn
+pandas
+matplotlib
+pillow
+opencv-python
+pyyaml
+torch
+torchvision
+facenet-pytorch
+pytest
