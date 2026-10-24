@@ -4,8 +4,8 @@ import subprocess
 import sys
 
 FORBIDDEN = [
-    r"^data/private/", r"^data/teste_local/", r"^faces/", r"^embeddings/",
-    r"^checkpoints/private/", r"^consent/",
+    r"(^|/)data/private/", r"(^|/)data/teste_local/", r"(^|/)faces/", r"(^|/)embeddings/",
+    r"(^|/)checkpoints/private/", r"(^|/)consent/",
     r"\.(db|sqlite|sqlite3|pt|pth|ckpt|onnx|safetensors)$", r"(^|/)weights\.bin$",
 ]
 

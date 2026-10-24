@@ -1,6 +1,6 @@
 # ADR-002 - Armazenamento de embeddings
 
-- Status: proposta (confirmar ao implementar a Parte 2)
+- Status: aceita (confirmada na implementacao da Parte 2)
 - Data: 2026-10-23
 
 ## Contexto
@@ -16,10 +16,14 @@ Detalhes de implementacao:
   reconhecimento e calculado a partir deles, como no E02.
 - O embedding e guardado como vetor de 512 valores normalizados.
 - O banco fica em `data/private/`, pasta ignorada pelo Git (`*.db` tambem esta no `.gitignore`).
-- O SQLite nao aplica chaves estrangeiras por padrao: a conexao deve executar
+- O SQLite nao aplica chaves estrangeiras por padrao: toda conexao executa
   `PRAGMA foreign_keys = ON`, senao a exclusao em cascata nao funciona.
+- Toda conexao executa tambem `PRAGMA secure_delete = ON`: o conteudo apagado e sobrescrito com
+  zeros no arquivo, em vez de apenas ficar marcado como livre.
+- O nome da pessoa e unico sem diferenciar maiusculas, e o cadastro (pessoa, embeddings e fotos)
+  e feito em uma unica transacao: se algo falha, nada fica no banco nem em disco.
 - A exclusao de uma pessoa remove o cadastro, os embeddings e as fotos associadas, e o teste
-  automatizado deve conferir que nada sobra.
+  automatizado confere que nada sobra.
 
 ## Consequencias
 Simples, sem servidor, facil de excluir uma pessoa. Busca por forca bruta e suficiente para poucos
