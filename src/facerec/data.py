@@ -1,8 +1,10 @@
-"""Carregamento do dataset publico (LFW) direto da fonte, via scikit-learn.
+"""Carregamento do dataset publico (LFW, variante funneled) via scikit-learn.
 
-Os arquivos sao baixados para a pasta do scikit-learn (fora do repositorio), entao nada do
-dataset e redistribuido no GitHub.
+O fetch_lfw_people baixa uma copia do arquivo, hospedada no figshare, para a pasta do
+scikit-learn (fora do repositorio), entao nada do dataset e redistribuido no GitHub.
+Fonte oficial: http://vis-www.cs.umass.edu/lfw/
 """
+
 import numpy as np
 
 

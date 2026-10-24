@@ -29,11 +29,21 @@ pytest
 ```
 Hardware usado nos experimentos: notebook, CPU, 8 GB de RAM, Intel HD Graphics 520 (sem GPU dedicada).
 
+Pre-processamento e transformacoes: recorte central de 144x144 sobre as imagens de 250x250 do
+LFW e redimensionamento para 160x160 (valores em `configs/`). As imagens do LFW ja vem com a face
+centralizada, entao o carregamento dos experimentos da Parte 1 nao usa detector de faces; a
+deteccao entra na aplicacao da Parte 2. Nao ha data augmentation: o FaceNet nao e treinado, e o
+E03 treina so uma camada sobre embeddings calculados uma vez e guardados em cache. Seed 42 em
+todos os experimentos.
+
 ## Datasets
-- **Publico (experimentos da Parte 1):** LFW (Labeled Faces in the Wild), fonte oficial
+- **Publico (experimentos da Parte 1):** LFW (Labeled Faces in the Wild), na variante
+  *funneled* (alinhada), que e a padrao do `fetch_lfw_people`, fonte oficial
   http://vis-www.cs.umass.edu/lfw/, usado para experimentacao e benchmark academico. O
-  repositorio nao redistribui o dataset: o codigo baixa direto da fonte (via scikit-learn) para
-  uma pasta fora do repositorio. Licenca e detalhes de uso em `data/README.md`.
+  repositorio nao redistribui o dataset: o codigo usa `fetch_lfw_people` do scikit-learn, que
+  baixa uma copia do arquivo hospedada no figshare (o original esta na fonte oficial acima) para
+  a pasta de dados do scikit-learn, fora do repositorio. Licenca e detalhes de uso em
+  `data/README.md`.
 - **Privado (Parte 2):** fotos dos proprios participantes, coletadas com Termo de Consentimento
   e mantidas apenas localmente (`data/private/`, `consent/`). Nada disso vai para o GitHub.
 
@@ -45,6 +55,13 @@ Justificativa tecnica: o FaceNet pre-treinado gera embeddings de 512 dimensoes q
 as pessoas (AUC 0.9995 no E01); roda em CPU, o que e o limite do hardware disponivel; e as duas
 tentativas de treino adicional (E03) nao trouxeram ganho. A calibracao do threshold no conjunto
 aberto (E02) foi a melhoria que de fato reduziu os erros. Detalhes em `docs/decisions/`.
+
+## Prevenção de data leakage
+- A divisão treino/validação/teste é **por identidade** (60/20/20, seed 42): cada pessoa fica em um único conjunto, então fotos parecidas da mesma pessoa não atravessam conjuntos.
+- `check_no_leakage` (`src/facerec/splits.py`) levanta erro se uma identidade aparece em dois conjuntos ou se uma imagem idêntica (hash SHA-1 dos bytes) aparece em conjuntos diferentes. A checagem por hash roda no E01 e no E02; no E03 roda só a de identidades, porque os embeddings vêm do mesmo cache.
+- O teste só reporta: o threshold, a melhor época do treino e os alvos de FAR são escolhidos na validação (E01, E02 e E03).
+- Não há data augmentation, então não existem transformações da mesma imagem espalhadas pelos conjuntos.
+- **Limitações:** o hash só detecta imagens idênticas byte a byte; imagens quase idênticas de pessoas diferentes não são verificadas. Além disso, o FaceNet pode ter visto identidades do LFW no pré-treino (VGGFace2), o que a divisão não controla.
 
 ## Experimentos (Parte 1)
 | Experimento | Modelo | Estratégia | Dataset | Accuracy | F1 | Observação |
@@ -129,11 +146,11 @@ O gráfico acima mostra, por época, a perda de treino e o EER de validação da
 
 ![Conjunto aberto no E03](results/E03_conjunto_aberto.png)
 
-O gráfico acima mostra o conjunto aberto no teste para o baseline e as duas perdas, no mesmo formato do E02.
+O gráfico acima mostra, no conjunto aberto do teste, a identificação correta de conhecidos contra os desconhecidos aceitos (FAR). As curvas do baseline, do Triplet e da Cross-Entropy coincidem, porque a melhor época das duas perdas foi a 0, e por isso só a última desenhada (verde) aparece. Os círculos preenchidos são os thresholds calibrados na validação e o círculo vazado é o do EER por pares.
 
 **Análise.**
 - **Melhor modelo e por quê.** O baseline. O FaceNet pré-treinado em um dataset grande já separa bem as pessoas do LFW (AUC 0.9995), e treinar com 95 identidades não trouxe ganho.
-- **Modificações que pioraram.** As duas camadas treinadas pioraram o EER de validação (de 0.0060 para valores entre 0.0090 e 0.0168 com Triplet, 0.0140 na última época, e entre 0.0062 e 0.0078 com Cross-Entropy, 0.0072 na última). Nas duas, a perda de treino cai para perto de zero enquanto o EER de validação não melhora, sinal de sobreajuste: a camada tem cerca de 262 mil parâmetros para 95 identidades.
+- **Modificações que pioraram.** As duas camadas treinadas pioraram o EER de validação (de 0.0060 para valores entre 0.0090 e 0.0168 com Triplet, 0.0140 na última época, e entre 0.0062 e 0.0078 com Cross-Entropy, 0.0072 na última). A perda de treino é baixa desde o início (Triplet: 0.024 na época 1 e cerca de 0.008 no fim; Cross-Entropy: de 1.08 na época 1 para 0.035 na época 2 e 0.002 no fim), mas o EER de validação não melhora. É sinal de sobreajuste: a camada tem cerca de 262 mil parâmetros para 95 identidades.
 - **H1 e H2.** H1 não se confirma. H2 não pode ser decidida no teste, porque as duas perdas voltaram ao baseline; só dá para dizer que, na validação, a Cross-Entropy piorou menos que a Triplet (uma semente e uma configuração de hiperparâmetros, então sem generalizar).
 - **Impacto do fine-tuning.** Nenhum ganho. O que foi treinado é uma camada de projeção sobre embeddings congelados (fine-tuning só da cabeça); as camadas internas do FaceNet não foram ajustadas.
 - **Impacto do threshold.** Maior que o do treino adicional. Trocar o threshold de EER por pares (0.4746) pelo calibrado no conjunto aberto com FAR 1% (0.7160) levou os desconhecidos aceitos de 5.48% para 0%, ao custo de rejeitar mais conhecidos (de 0.12% para 2.46%).
