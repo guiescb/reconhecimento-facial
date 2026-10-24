@@ -1,0 +1,658 @@
+{
+  "experiment": "E03",
+  "hypothesis": "H1: treinar uma camada de projecao (512->512, iniciada na identidade) sobre os embeddings congelados do FaceNet, usando so as identidades de TREINO, reduz o EER de pares e os desconhecidos aceitos no conjunto aberto do teste, em relacao ao baseline do E01/E02. H2: a Triplet Loss (metric learning) funciona melhor que a Cross-Entropy para embeddings usados por comparacao de similaridade. O baseline ja tem AUC 0.9995, entao um ganho pequeno, nulo ou negativo tambem e um resultado valido.",
+  "config": {
+    "experiment_id": "E03",
+    "hypothesis": "H1: treinar uma camada de projecao (512->512, iniciada na identidade) sobre os embeddings congelados do FaceNet, usando so as identidades de TREINO, reduz o EER de pares e os desconhecidos aceitos no conjunto aberto do teste, em relacao ao baseline do E01/E02. H2: a Triplet Loss (metric learning) funciona melhor que a Cross-Entropy para embeddings usados por comparacao de similaridade. O baseline ja tem AUC 0.9995, entao um ganho pequeno, nulo ou negativo tambem e um resultado valido.\n",
+    "seed": 42,
+    "dataset": {
+      "name": "lfw",
+      "min_faces_per_person": 10,
+      "crop": 144,
+      "image_size": 160
+    },
+    "model": {
+      "name": "facenet_inception_resnet_v1",
+      "pretrained": "vggface2",
+      "batch_size": 32,
+      "device": "cpu"
+    },
+    "embeddings_cache": "data/cache/E01_vggface2_crop144.npz",
+    "labels_cache": "data/cache/lfw_labels_min10.npy",
+    "split": {
+      "fractions": [
+        0.6,
+        0.2,
+        0.2
+      ]
+    },
+    "pairs": {
+      "n_val_pairs": 4000,
+      "n_test_pairs": 4000
+    },
+    "training": {
+      "losses": [
+        "triplet",
+        "cross_entropy"
+      ],
+      "epochs": 30,
+      "lr": 0.001,
+      "weight_decay": 0.0001,
+      "triplet": {
+        "margin": 0.3,
+        "P": 32,
+        "K": 4
+      },
+      "cross_entropy": {
+        "batch_size": 128,
+        "scale": 16.0
+      }
+    },
+    "open_set": {
+      "n_enroll": 3,
+      "known_fraction": 0.5,
+      "far_targets": [
+        0.05,
+        0.02,
+        0.01
+      ],
+      "primary_far_target": 0.01,
+      "n_calibration_repeats": 20
+    },
+    "output_dir": "results",
+    "save_dir": "data/cache"
+  },
+  "environment": {
+    "python": "3.14.7",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "Intel64 Family 6 Model 78 Stepping 3, GenuineIntel",
+    "numpy": "2.5.4",
+    "scikit_learn": "1.9.1",
+    "torch": "2.14.1+cpu",
+    "torch_threads": 2
+  },
+  "dataset": {
+    "train_images": 2115,
+    "val_images": 944,
+    "test_images": 1265,
+    "train_identities": 95,
+    "val_identities": 32,
+    "test_identities": 31
+  },
+  "models": {
+    "baseline": {
+      "evaluation": {
+        "pairs": {
+          "validation": {
+            "auc": 0.9997535,
+            "eer": 0.006000000000000003,
+            "eer_threshold": 0.4746019244194031
+          },
+          "test_roc": {
+            "auc": 0.9995435,
+            "eer": 0.0067500000000000025,
+            "eer_threshold": 0.4199558198451996
+          },
+          "test_at_validation_threshold": {
+            "threshold": 0.4746019244194031,
+            "accuracy": 0.9925,
+            "precision": 0.9964717741935484,
+            "recall": 0.9885,
+            "f1": 0.9924698795180723,
+            "far": 0.0035,
+            "frr": 0.0115,
+            "confusion_matrix": [
+              [
+                1993,
+                7
+              ],
+              [
+                23,
+                1977
+              ]
+            ]
+          }
+        },
+        "open_set": {
+          "pair_eer": {
+            "threshold": 0.4746019244194031,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9988262910798122,
+            "false_rejection_rate_known": 0.0011737089201877935,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0547945205479452,
+            "open_set_accuracy": 0.9827444535743632,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 4
+          },
+          "far_0.05": {
+            "threshold": 0.5823274850845337,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9976525821596244,
+            "false_rejection_rate_known": 0.002347417840375587,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0027397260273972603,
+            "open_set_accuracy": 0.9975349219391948,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 1
+          },
+          "far_0.02": {
+            "threshold": 0.6752755045890808,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9870892018779343,
+            "false_rejection_rate_known": 0.012910798122065728,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0,
+            "open_set_accuracy": 0.9909613804437141,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 0
+          },
+          "far_0.01": {
+            "threshold": 0.7160090208053589,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9753521126760564,
+            "false_rejection_rate_known": 0.02464788732394366,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0,
+            "open_set_accuracy": 0.9827444535743632,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 0
+          }
+        }
+      }
+    },
+    "triplet": {
+      "best_epoch": 0,
+      "best_val_eer": 0.006000000000000003,
+      "history": [
+        {
+          "epoch": 0,
+          "train_loss": null,
+          "val_eer": 0.006000000000000003
+        },
+        {
+          "epoch": 1,
+          "train_loss": 0.02439762432785595,
+          "val_eer": 0.009000000000000005
+        },
+        {
+          "epoch": 2,
+          "train_loss": 0.022208601099384183,
+          "val_eer": 0.010749999999999977
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.015247404383605017,
+          "val_eer": 0.014249999999999978
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.010918584077016395,
+          "val_eer": 0.015000000000000006
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.006785812075523769,
+          "val_eer": 0.013249999999999977
+        },
+        {
+          "epoch": 6,
+          "train_loss": 0.008423807373379959,
+          "val_eer": 0.014250000000000006
+        },
+        {
+          "epoch": 7,
+          "train_loss": 0.008927480865489034,
+          "val_eer": 0.016750000000000008
+        },
+        {
+          "epoch": 8,
+          "train_loss": 0.009007704088135678,
+          "val_eer": 0.013499999999999977
+        },
+        {
+          "epoch": 9,
+          "train_loss": 0.007053732899401118,
+          "val_eer": 0.012250000000000006
+        },
+        {
+          "epoch": 10,
+          "train_loss": 0.00811116915086613,
+          "val_eer": 0.014499999999999978
+        },
+        {
+          "epoch": 11,
+          "train_loss": 0.009861741105423254,
+          "val_eer": 0.013000000000000005
+        },
+        {
+          "epoch": 12,
+          "train_loss": 0.007391224560492179,
+          "val_eer": 0.012249999999999978
+        },
+        {
+          "epoch": 13,
+          "train_loss": 0.0061529409688185245,
+          "val_eer": 0.011250000000000005
+        },
+        {
+          "epoch": 14,
+          "train_loss": 0.00971652167465757,
+          "val_eer": 0.014249999999999978
+        },
+        {
+          "epoch": 15,
+          "train_loss": 0.008167090113548672,
+          "val_eer": 0.012250000000000006
+        },
+        {
+          "epoch": 16,
+          "train_loss": 0.006363874849151163,
+          "val_eer": 0.014249999999999978
+        },
+        {
+          "epoch": 17,
+          "train_loss": 0.0074168025680324615,
+          "val_eer": 0.012249999999999978
+        },
+        {
+          "epoch": 18,
+          "train_loss": 0.008210842086769202,
+          "val_eer": 0.013250000000000005
+        },
+        {
+          "epoch": 19,
+          "train_loss": 0.007906363044372377,
+          "val_eer": 0.013999999999999978
+        },
+        {
+          "epoch": 20,
+          "train_loss": 0.005782974308685344,
+          "val_eer": 0.012749999999999977
+        },
+        {
+          "epoch": 21,
+          "train_loss": 0.008049692657283124,
+          "val_eer": 0.012500000000000004
+        },
+        {
+          "epoch": 22,
+          "train_loss": 0.006864634205532425,
+          "val_eer": 0.012000000000000005
+        },
+        {
+          "epoch": 23,
+          "train_loss": 0.005758268101250424,
+          "val_eer": 0.015000000000000006
+        },
+        {
+          "epoch": 24,
+          "train_loss": 0.00485804515397724,
+          "val_eer": 0.012499999999999978
+        },
+        {
+          "epoch": 25,
+          "train_loss": 0.009073657805428785,
+          "val_eer": 0.012000000000000005
+        },
+        {
+          "epoch": 26,
+          "train_loss": 0.012382561039617834,
+          "val_eer": 0.012749999999999977
+        },
+        {
+          "epoch": 27,
+          "train_loss": 0.009713411933797248,
+          "val_eer": 0.013250000000000005
+        },
+        {
+          "epoch": 28,
+          "train_loss": 0.008138866191182067,
+          "val_eer": 0.013499999999999977
+        },
+        {
+          "epoch": 29,
+          "train_loss": 0.006979365285266848,
+          "val_eer": 0.014250000000000006
+        },
+        {
+          "epoch": 30,
+          "train_loss": 0.008077535860459594,
+          "val_eer": 0.014000000000000005
+        }
+      ],
+      "evaluation": {
+        "pairs": {
+          "validation": {
+            "auc": 0.9997535,
+            "eer": 0.006000000000000003,
+            "eer_threshold": 0.4746019244194031
+          },
+          "test_roc": {
+            "auc": 0.9995435,
+            "eer": 0.0067500000000000025,
+            "eer_threshold": 0.4199558198451996
+          },
+          "test_at_validation_threshold": {
+            "threshold": 0.4746019244194031,
+            "accuracy": 0.9925,
+            "precision": 0.9964717741935484,
+            "recall": 0.9885,
+            "f1": 0.9924698795180723,
+            "far": 0.0035,
+            "frr": 0.0115,
+            "confusion_matrix": [
+              [
+                1993,
+                7
+              ],
+              [
+                23,
+                1977
+              ]
+            ]
+          }
+        },
+        "open_set": {
+          "pair_eer": {
+            "threshold": 0.4746019244194031,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9988262910798122,
+            "false_rejection_rate_known": 0.0011737089201877935,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0547945205479452,
+            "open_set_accuracy": 0.9827444535743632,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 4
+          },
+          "far_0.05": {
+            "threshold": 0.5823274850845337,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9976525821596244,
+            "false_rejection_rate_known": 0.002347417840375587,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0027397260273972603,
+            "open_set_accuracy": 0.9975349219391948,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 1
+          },
+          "far_0.02": {
+            "threshold": 0.6752755045890808,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9870892018779343,
+            "false_rejection_rate_known": 0.012910798122065728,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0,
+            "open_set_accuracy": 0.9909613804437141,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 0
+          },
+          "far_0.01": {
+            "threshold": 0.7160090208053589,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9753521126760564,
+            "false_rejection_rate_known": 0.02464788732394366,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0,
+            "open_set_accuracy": 0.9827444535743632,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 0
+          }
+        }
+      }
+    },
+    "cross_entropy": {
+      "best_epoch": 0,
+      "best_val_eer": 0.006000000000000003,
+      "history": [
+        {
+          "epoch": 0,
+          "train_loss": null,
+          "val_eer": 0.006000000000000003
+        },
+        {
+          "epoch": 1,
+          "train_loss": 1.0810789378250347,
+          "val_eer": 0.0064999999999999745
+        },
+        {
+          "epoch": 2,
+          "train_loss": 0.03458036893211743,
+          "val_eer": 0.006250000000000002
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.017859442488235587,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.011700464878231287,
+          "val_eer": 0.007250000000000003
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.01079357711269575,
+          "val_eer": 0.007250000000000003
+        },
+        {
+          "epoch": 6,
+          "train_loss": 0.008436716545154066,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 7,
+          "train_loss": 0.007458849673104637,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 8,
+          "train_loss": 0.006510938161655384,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 9,
+          "train_loss": 0.006113177466699306,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 10,
+          "train_loss": 0.005488722393398776,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 11,
+          "train_loss": 0.005330908276578959,
+          "val_eer": 0.007749999999999976
+        },
+        {
+          "epoch": 12,
+          "train_loss": 0.004771445371101008,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 13,
+          "train_loss": 0.004502042141907355,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 14,
+          "train_loss": 0.004149786963620607,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 15,
+          "train_loss": 0.00393259063746561,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 16,
+          "train_loss": 0.0038088355487322107,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 17,
+          "train_loss": 0.003611412803258966,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 18,
+          "train_loss": 0.0034255424432237357,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 19,
+          "train_loss": 0.0033215275719104442,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 20,
+          "train_loss": 0.003216412945595734,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 21,
+          "train_loss": 0.003077874001225128,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 22,
+          "train_loss": 0.0029567956979222156,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 23,
+          "train_loss": 0.0028611195739358664,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 24,
+          "train_loss": 0.002746062134118641,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 25,
+          "train_loss": 0.002678515458041254,
+          "val_eer": 0.007000000000000003
+        },
+        {
+          "epoch": 26,
+          "train_loss": 0.002618782441405689,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 27,
+          "train_loss": 0.0025090320337125484,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 28,
+          "train_loss": 0.0024478204603142597,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 29,
+          "train_loss": 0.0023746674551683314,
+          "val_eer": 0.0074999999999999754
+        },
+        {
+          "epoch": 30,
+          "train_loss": 0.002325938850202981,
+          "val_eer": 0.007249999999999975
+        }
+      ],
+      "evaluation": {
+        "pairs": {
+          "validation": {
+            "auc": 0.9997535,
+            "eer": 0.006000000000000003,
+            "eer_threshold": 0.4746019244194031
+          },
+          "test_roc": {
+            "auc": 0.9995435,
+            "eer": 0.0067500000000000025,
+            "eer_threshold": 0.4199558198451996
+          },
+          "test_at_validation_threshold": {
+            "threshold": 0.4746019244194031,
+            "accuracy": 0.9925,
+            "precision": 0.9964717741935484,
+            "recall": 0.9885,
+            "f1": 0.9924698795180723,
+            "far": 0.0035,
+            "frr": 0.0115,
+            "confusion_matrix": [
+              [
+                1993,
+                7
+              ],
+              [
+                23,
+                1977
+              ]
+            ]
+          }
+        },
+        "open_set": {
+          "pair_eer": {
+            "threshold": 0.4746019244194031,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9988262910798122,
+            "false_rejection_rate_known": 0.0011737089201877935,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0547945205479452,
+            "open_set_accuracy": 0.9827444535743632,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 4
+          },
+          "far_0.05": {
+            "threshold": 0.5823274850845337,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9976525821596244,
+            "false_rejection_rate_known": 0.002347417840375587,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0027397260273972603,
+            "open_set_accuracy": 0.9975349219391948,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 1
+          },
+          "far_0.02": {
+            "threshold": 0.6752755045890808,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9870892018779343,
+            "false_rejection_rate_known": 0.012910798122065728,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0,
+            "open_set_accuracy": 0.9909613804437141,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 0
+          },
+          "far_0.01": {
+            "threshold": 0.7160090208053589,
+            "n_probes_known": 852,
+            "n_probes_unknown": 365,
+            "correct_identification_rate": 0.9753521126760564,
+            "false_rejection_rate_known": 0.02464788732394366,
+            "misidentification_rate_known": 0.0,
+            "false_acceptance_rate_unknown": 0.0,
+            "open_set_accuracy": 0.9827444535743632,
+            "n_unknown_identities": 15,
+            "unknown_identities_with_acceptance": 0
+          }
+        }
+      }
+    }
+  },
+  "runtime_seconds": 130.9
+}

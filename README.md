@@ -15,12 +15,36 @@ data/README.md  origem dos dados     scripts/        utilitarios (checagem de pr
 ```
 
 ## Ambiente
+O `facerec-project` foi testado com Python 3.14.7, torch 2.14.1 (CPU) e numpy 2.5.4
+(lista completa em `requirements.lock.txt`). O `facenet-pytorch` declara versoes antigas de
+torch, numpy e Pillow, entao instalar tudo de uma vez gera conflito de dependencias.
+Com ele instalado sem as dependencias, o codigo funciona nas versoes acima:
 ```
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install torch torchvision
+pip install facenet-pytorch --no-deps
+pip install numpy scipy scikit-learn pandas matplotlib pillow requests tqdm opencv-python pyyaml pytest
+python scripts/check_env.py
 pytest
 ```
-Hardware usado nos experimentos: notebook, CPU, Intel HD Graphics 520 (sem GPU dedicada).
+Hardware usado nos experimentos: notebook, CPU, 8 GB de RAM, Intel HD Graphics 520 (sem GPU dedicada).
+
+## Datasets
+- **Publico (experimentos da Parte 1):** LFW (Labeled Faces in the Wild), fonte oficial
+  http://vis-www.cs.umass.edu/lfw/, usado para experimentacao e benchmark academico. O
+  repositorio nao redistribui o dataset: o codigo baixa direto da fonte (via scikit-learn) para
+  uma pasta fora do repositorio. Licenca e detalhes de uso em `data/README.md`.
+- **Privado (Parte 2):** fotos dos proprios participantes, coletadas com Termo de Consentimento
+  e mantidas apenas localmente (`data/private/`, `consent/`). Nada disso vai para o GitHub.
+
+## Decisao da Parte 1
+FaceNet (InceptionResnetV1, pesos VGGFace2) **sem treino adicional**, galeria por **prototipo**,
+**similaridade de cosseno** e threshold calibrado na validacao com **FAR 1%**.
+
+Justificativa tecnica: o FaceNet pre-treinado gera embeddings de 512 dimensoes que ja separam bem
+as pessoas (AUC 0.9995 no E01); roda em CPU, o que e o limite do hardware disponivel; e as duas
+tentativas de treino adicional (E03) nao trouxeram ganho. A calibracao do threshold no conjunto
+aberto (E02) foi a melhoria que de fato reduziu os erros. Detalhes em `docs/decisions/`.
 
 ## Experimentos (Parte 1)
 | Experimento | Modelo | Estratégia | Dataset | Accuracy | F1 | Observação |
@@ -29,6 +53,8 @@ Hardware usado nos experimentos: notebook, CPU, Intel HD Graphics 520 (sem GPU d
 | E01 | FaceNet (VGGFace2) | baseline, euclidiana | LFW | 0.9925 | 0.9925 | Idêntico ao cosseno (embeddings normalizados) |
 | E02 | FaceNet (VGGFace2) | protótipo, threshold FAR 1% calibrado na validação | LFW | 0.9827 | — | Accuracy do conjunto aberto. Ponto principal (definido a priori). Id. correta 97.54%, desconhecidos aceitos 0% |
 | E02 | FaceNet (VGGFace2) | vizinho mais próximo, threshold FAR 1% | LFW | 0.9655 | — | Accuracy do conjunto aberto. Id. correta 95.07%, desconhecidos aceitos 0% |
+| E03 | FaceNet (VGGFace2) + camada de projeção 512→512 | Triplet Loss batch-hard, melhor época pela validação | LFW | 0.9925 | 0.9925 | Melhor época = 0 (baseline). O treino piorou o EER na validação |
+| E03 | FaceNet (VGGFace2) + camada de projeção 512→512 | Cross-Entropy (classificador por cosseno), melhor época pela validação | LFW | 0.9925 | 0.9925 | Melhor época = 0 (baseline). O treino piorou o EER na validação |
 
 Resultados com dados privados aparecem somente agregados, sem identificar participantes.
 
@@ -82,6 +108,41 @@ O gráfico da esquerda mostra a identificação correta contra os desconhecidos 
 **Discussão.** Em verificação de pares o baseline já era muito bom (AUC 0.9995). O ponto fraco aparece na identificação, em que um desconhecido é comparado com todas as pessoas cadastradas e fica com a mais parecida. Isso eleva a similaridade dos impostores, e o threshold de EER por pares deixava passar 5.48% dos desconhecidos. Calibrar o threshold no conjunto aberto da validação reduziu esse erro para 0.27% (FAR 5%) com perda de 0.11 ponto na identificação correta. O vizinho mais próximo aceitou mais desconhecidos no threshold do E01 e identificou pior nos thresholds mais rígidos, mas as diferenças são pequenas e o teste tem poucas pessoas desconhecidas, então não são conclusivas.
 
 **Limitações.** O threshold foi calibrado no LFW e deve ser recalibrado com fotos de câmera real. Os alvos de FAR da validação ficaram conservadores no teste (0% observado), e 0 em 365 fotos não prova FAR zero.
+
+## Análise do E03: camada de projeção sobre embeddings congelados
+
+**Hipóteses.** H1: treinar uma camada 512→512 (iniciada na identidade) sobre os embeddings congelados do FaceNet, só com as identidades de treino, reduz o EER e os desconhecidos aceitos. H2: Triplet Loss supera Cross-Entropy para comparação por similaridade.
+
+**Método.** FaceNet (VGGFace2) congelado; camada linear treinada por 30 épocas (Adam, lr 1e-3, weight decay 1e-4) com Triplet Loss batch-hard (margem 0.3, P=32, K=4) e com Cross-Entropy de classificador por cosseno (escala 16). A melhor época é escolhida pelo EER de pares na **validação**; o teste só reporta. Mesma divisão por identidade, mesmos pares e mesmo conjunto aberto do E01 e do E02.
+
+**Resultado.** Nas duas perdas a melhor época foi a 0, isto é, o próprio baseline. Por isso as três linhas são idênticas.
+
+| Modelo | AUC | EER | Acc | F1 | FAR | FRR |
+|---|---|---|---|---|---|---|
+| Baseline (sem treino) | 0.9995 | 0.0068 | 0.9925 | 0.9925 | 0.0035 | 0.0115 |
+| Triplet (melhor época = 0) | 0.9995 | 0.0068 | 0.9925 | 0.9925 | 0.0035 | 0.0115 |
+| Cross-Entropy (melhor época = 0) | 0.9995 | 0.0068 | 0.9925 | 0.9925 | 0.0035 | 0.0115 |
+
+![Treino do E03](results/E03_treino.png)
+
+O gráfico acima mostra, por época, a perda de treino e o EER de validação das duas perdas. A época 0 é o baseline.
+
+![Conjunto aberto no E03](results/E03_conjunto_aberto.png)
+
+O gráfico acima mostra o conjunto aberto no teste para o baseline e as duas perdas, no mesmo formato do E02.
+
+**Análise.**
+- **Melhor modelo e por quê.** O baseline. O FaceNet pré-treinado em um dataset grande já separa bem as pessoas do LFW (AUC 0.9995), e treinar com 95 identidades não trouxe ganho.
+- **Modificações que pioraram.** As duas camadas treinadas pioraram o EER de validação (de 0.0060 para valores entre 0.0090 e 0.0168 com Triplet, 0.0140 na última época, e entre 0.0062 e 0.0078 com Cross-Entropy, 0.0072 na última). Nas duas, a perda de treino cai para perto de zero enquanto o EER de validação não melhora, sinal de sobreajuste: a camada tem cerca de 262 mil parâmetros para 95 identidades.
+- **H1 e H2.** H1 não se confirma. H2 não pode ser decidida no teste, porque as duas perdas voltaram ao baseline; só dá para dizer que, na validação, a Cross-Entropy piorou menos que a Triplet (uma semente e uma configuração de hiperparâmetros, então sem generalizar).
+- **Impacto do fine-tuning.** Nenhum ganho. O que foi treinado é uma camada de projeção sobre embeddings congelados (fine-tuning só da cabeça); as camadas internas do FaceNet não foram ajustadas.
+- **Impacto do threshold.** Maior que o do treino adicional. Trocar o threshold de EER por pares (0.4746) pelo calibrado no conjunto aberto com FAR 1% (0.7160) levou os desconhecidos aceitos de 5.48% para 0%, ao custo de rejeitar mais conhecidos (de 0.12% para 2.46%).
+- **Erros.** Nenhum conhecido foi confundido com outra pessoa; os erros são conhecidos rejeitados e desconhecidos aceitos.
+- **Limitações.** O LFW tem composição desbalanceada e fotos de imprensa; só 31 identidades de teste; uma semente e uma divisão; não foi testado fine-tuning das camadas internas; outros modelos (MobileFaceNet, ResNet pequena) não foram comparados; o dataset privado ainda não foi avaliado.
+- **Custo e complexidade.** O custo está em extrair os embeddings (feito uma vez, em CPU, com cache); treinar a camada é leve: o E03 inteiro (30 épocas para cada uma das duas perdas, mais as avaliações) levou 131 s em CPU, com 2 threads. O baseline é o mais simples e o melhor, então é o escolhido.
+
+## Parte 2: aplicação (em desenvolvimento)
+Cadastro de pessoa, reconhecimento (imagem ou câmera, com "pessoa desconhecida" abaixo do threshold), exclusão de uma pessoa (cadastro, embedding e fotos) e interface. O repositório abre com "Nenhuma pessoa cadastrada" e cada pessoa que clonar o projeto cria o próprio banco local. As especificações estão em `docs/specs/`.
 
 ## Desenvolvimento
 Spec-Driven Development: requisitos e criterios de aceitacao em `docs/specs/`,

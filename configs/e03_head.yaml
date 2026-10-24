@@ -1,0 +1,41 @@
+experiment_id: E03
+hypothesis: >
+  H1: treinar uma camada de projecao (512->512, iniciada na identidade) sobre os embeddings
+  congelados do FaceNet, usando so as identidades de TREINO, reduz o EER de pares e os
+  desconhecidos aceitos no conjunto aberto do teste, em relacao ao baseline do E01/E02.
+  H2: a Triplet Loss (metric learning) funciona melhor que a Cross-Entropy para embeddings
+  usados por comparacao de similaridade. O baseline ja tem AUC 0.9995, entao um ganho pequeno,
+  nulo ou negativo tambem e um resultado valido.
+seed: 42
+dataset:
+  name: lfw
+  min_faces_per_person: 10
+  crop: 144
+  image_size: 160
+model:                      # so usado se o cache de embeddings do E01 nao existir
+  name: facenet_inception_resnet_v1
+  pretrained: vggface2
+  batch_size: 32
+  device: cpu
+embeddings_cache: data/cache/E01_vggface2_crop144.npz   # os mesmos embeddings do E01
+labels_cache: data/cache/lfw_labels_min10.npy           # criado na 1a execucao (acelera as proximas)
+split:
+  fractions: [0.6, 0.2, 0.2]   # identico ao E01 e E02 (por IDENTIDADE)
+pairs:
+  n_val_pairs: 4000
+  n_test_pairs: 4000
+training:
+  losses: [triplet, cross_entropy]
+  epochs: 30
+  lr: 0.001
+  weight_decay: 0.0001
+  triplet: {margin: 0.3, P: 32, K: 4}
+  cross_entropy: {batch_size: 128, scale: 16.0}
+open_set:
+  n_enroll: 3
+  known_fraction: 0.5
+  far_targets: [0.05, 0.02, 0.01]   # alvos definidos antes de ver o teste
+  primary_far_target: 0.01          # ponto de operacao principal, definido a priori
+  n_calibration_repeats: 20
+output_dir: results
+save_dir: data/cache
