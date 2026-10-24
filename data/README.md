@@ -19,5 +19,6 @@ Como obter: o codigo usa fetch_lfw_people do scikit-learn, que baixa uma copia d
 
 Fotos de participantes adultos que assinaram o Termo de Consentimento (Anexo A).
 Fica apenas na maquina do autor, em `data/private/`, e NUNCA e versionado.
-Estrutura local esperada: `data/private/<id_anonimo>/foto_001.jpg`.
+Estrutura local criada pela aplicação: `data/private/facerec.db` (cadastros e embeddings) e, só se `store_photos: true`, `data/private/photos/<id>/01.jpg`.
+Fotografias, nomes, embeddings e o banco são todos dados biométricos privados.
 Os termos assinados ficam em `consent/`, que o Git ignora.

@@ -1,0 +1,3 @@
+# Privacidade: nao enviar estatisticas de uso a terceiros.
+[browser]
+gatherUsageStats = false

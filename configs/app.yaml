@@ -1,0 +1,32 @@
+# Configuracao da aplicacao (Parte 2). Os valores vem da melhor configuracao da Parte 1
+# (ADR-001 e ADR-003). Alterar um valor aqui muda o comportamento sem mexer no codigo.
+model:
+  name: facenet_inception_resnet_v1
+  pretrained: vggface2
+  device: cpu
+
+recognition:
+  metric: cosine
+  gallery: prototype
+  threshold: 0.7160            # FAR alvo 1%, calibrado na validacao do LFW (E02). Recalibrar com camera real.
+  duplicate_threshold: 0.7160  # acima disso, o cadastro e considerado duplicado
+
+detection:
+  image_size: 160
+  crop_scale: 1.3              # lado do recorte = 1.3 x lado da caixa da face (ajustar se necessario)
+  min_detection_prob: 0.9      # confianca minima do detector (cadastro)
+  min_face_px: 60              # menor lado da face, em pixels (cadastro)
+  min_sharpness: 25.0          # variancia do laplaciano do recorte; abaixo disso, imagem borrada
+
+enrollment:
+  min_photos: 3                # mesmo numero de fotos de cadastro usado no E01/E02/E03
+  max_photos: 10
+  store_photos: false          # minimizacao de dados: por padrao nao guarda fotos, so embeddings
+
+storage:
+  db_path: data/private/facerec.db      # pasta ignorada pelo Git
+  photos_dir: data/private/photos       # so usada se store_photos: true
+
+logging:
+  file: logs/app.log                    # pasta ignorada pelo Git; sem nomes nem dados biometricos
+  level: INFO

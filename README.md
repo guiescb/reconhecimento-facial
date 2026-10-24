@@ -12,6 +12,7 @@ src/facerec/    codigo-fonte         experiments/    scripts dos experimentos
 configs/        configuracoes        tests/          testes automatizados
 docs/specs/     especificacoes       docs/decisions/ ADRs
 data/README.md  origem dos dados     scripts/        utilitarios (checagem de privacidade)
+app/            interface (Streamlit) .streamlit/     config do Streamlit (sem telemetria)
 ```
 
 ## Ambiente
@@ -23,7 +24,7 @@ Com ele instalado sem as dependencias, o codigo funciona nas versoes acima:
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install torch torchvision
 pip install facenet-pytorch --no-deps
-pip install numpy scipy scikit-learn pandas matplotlib pillow requests tqdm opencv-python pyyaml pytest
+pip install numpy scipy scikit-learn pandas matplotlib pillow requests tqdm opencv-python pyyaml pytest streamlit
 python scripts/check_env.py
 pytest
 ```
@@ -158,8 +159,42 @@ O gráfico acima mostra, no conjunto aberto do teste, a identificação correta 
 - **Limitações.** O LFW tem composição desbalanceada e fotos de imprensa; só 31 identidades de teste; uma semente e uma divisão; não foi testado fine-tuning das camadas internas; outros modelos (MobileFaceNet, ResNet pequena) não foram comparados; o dataset privado ainda não foi avaliado.
 - **Custo e complexidade.** O custo está em extrair os embeddings (feito uma vez, em CPU, com cache); treinar a camada é leve: o E03 inteiro (30 épocas para cada uma das duas perdas, mais as avaliações) levou 131 s em CPU, com 2 threads. O baseline é o mais simples e o melhor, então é o escolhido.
 
-## Parte 2: aplicação (em desenvolvimento)
-Cadastro de pessoa, reconhecimento (imagem ou câmera, com "pessoa desconhecida" abaixo do threshold), exclusão de uma pessoa (cadastro, embedding e fotos) e interface. O repositório abre com "Nenhuma pessoa cadastrada" e cada pessoa que clonar o projeto cria o próprio banco local. As especificações estão em `docs/specs/`.
+## Parte 2: aplicação
+
+Aplicação web local (Streamlit) de cadastro e reconhecimento facial. Usa a melhor configuração da Parte 1 sem alterações: detecção MTCNN → embedding FaceNet (VGGFace2, sem treino extra) → galeria por protótipo → similaridade de cosseno → threshold 0.716 (FAR 1% na validação, ver `docs/decisions/ADR-003-recognition-threshold.md`). Nenhuma imagem sai do computador.
+
+### Como rodar
+```
+.venv\Scripts\activate          # com o ambiente da seção "Ambiente" já instalado
+streamlit run app/streamlit_app.py
+```
+Na primeira execução o Streamlit pergunta um e-mail: basta apertar Enter. O repositório abre com **"Nenhuma pessoa cadastrada"**; quem clonar o projeto cria o próprio banco local em `data/private/`. Os pesos do FaceNet e do MTCNN são baixados na primeira vez.
+
+### Funcionalidades
+- **Cadastrar:** nome + 3 a 10 fotos (arquivo ou câmera) + confirmação de que a pessoa é maior de 18 anos e assinou o Termo de Consentimento. Trata nenhuma face, várias faces, imagem inadequada (rosto pequeno, detecção pouco confiável, borrada) e cadastro duplicado. O cadastro é atômico: se algo falha, nada fica salvo.
+- **Reconhecer:** imagem de câmera ou arquivo; cada face recebe o nome ou "desconhecida" quando a similaridade fica abaixo do threshold.
+- **Pessoas e exclusão:** lista os cadastros e exclui uma pessoa por completo (cadastro, embeddings em cascata e fotos armazenadas).
+
+### Arquitetura
+- `src/facerec/detection.py`: detecção, alinhamento e controle de qualidade (spec 001)
+- `src/facerec/embedder.py`: FaceNet, mesma padronização da Parte 1
+- `src/facerec/store.py`: SQLite local, cascata e `secure_delete` (ADR-002, spec 006)
+- `src/facerec/service.py`: casos de uso: cadastro, reconhecimento, exclusão (specs 002 a 004); não depende da interface nem do PyTorch
+- `src/facerec/appfactory.py`, `config.py`, `errors.py`: montagem, configuração externa (`configs/app.yaml`) e erros tratados
+- `app/streamlit_app.py`: interface (spec 005, ADR-004)
+
+Threshold, parâmetros de qualidade e caminhos ficam em `configs/app.yaml`: mudar o valor muda o comportamento sem alterar código.
+
+### Testes
+`pytest` roda os testes da Parte 1 e da Parte 2. Os da aplicação usam detector e embedder de mentira com dados sintéticos (`tests/fakes.py`): não precisam de PyTorch, rede nem fotos reais.
+
+### Privacidade na aplicação
+- Banco, fotos (só se `store_photos: true`, desligado por padrão) e logs ficam em `data/private/` e `logs/`, ignorados pelo Git.
+- Os logs registram apenas ids curtos e contagens, nunca nomes nem dados biométricos (verificado em teste).
+- Estatísticas de uso do Streamlit desativadas (`.streamlit/config.toml`).
+
+### Limitações
+O threshold foi calibrado no LFW (fotos de imprensa); com câmera real a distribuição de similaridades pode mudar, então ele deve ser recalibrado com fotos reais de quem for usar (por isso a interface mostra a similaridade). Não há detecção de vivacidade: uma foto de uma foto pode ser aceita. O desempenho com dados privados não foi medido em escala.
 
 ## Desenvolvimento
 Spec-Driven Development: requisitos e criterios de aceitacao em `docs/specs/`,
