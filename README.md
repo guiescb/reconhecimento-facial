@@ -45,7 +45,7 @@ todos os experimentos.
   baixa uma copia do arquivo hospedada no figshare (o original esta na fonte oficial acima) para
   a pasta de dados do scikit-learn, fora do repositorio. Licenca e detalhes de uso em
   `data/README.md`.
-- **Privado (Parte 2):** fotos dos proprios participantes, coletadas com Termo de Consentimento
+- **Privado (aplicação da Parte 2 e avaliação agregada):** fotos dos proprios participantes, coletadas com Termo de Consentimento
   e mantidas apenas localmente (`data/private/`, `consent/`). Nada disso vai para o GitHub.
 
 ## Decisao da Parte 1
@@ -74,7 +74,7 @@ aberto (E02) foi a melhoria que de fato reduziu os erros. Detalhes em `docs/deci
 | E03 | FaceNet (VGGFace2) + camada de projeção 512→512 | Triplet Loss batch-hard, melhor época pela validação | LFW | 0.9925 | 0.9925 | Melhor época = 0 (baseline). O treino piorou o EER na validação |
 | E03 | FaceNet (VGGFace2) + camada de projeção 512→512 | Cross-Entropy (classificador por cosseno), melhor época pela validação | LFW | 0.9925 | 0.9925 | Melhor época = 0 (baseline). O treino piorou o EER na validação |
 
-Resultados com dados privados aparecem somente agregados, sem identificar participantes.
+Resultados com dados privados aparecem somente agregados, sem identificar participantes (ver a seção "Avaliação com dados privados (agregada)").
 
 ## Análise do E01: baseline sem fine-tuning
 
@@ -156,8 +156,23 @@ O gráfico acima mostra, no conjunto aberto do teste, a identificação correta 
 - **Impacto do fine-tuning.** Nenhum ganho. O que foi treinado é uma camada de projeção sobre embeddings congelados (fine-tuning só da cabeça); as camadas internas do FaceNet não foram ajustadas.
 - **Impacto do threshold.** Maior que o do treino adicional. Trocar o threshold de EER por pares (0.4746) pelo calibrado no conjunto aberto com FAR 1% (0.7160) levou os desconhecidos aceitos de 5.48% para 0%, ao custo de rejeitar mais conhecidos (de 0.12% para 2.46%).
 - **Erros.** Nenhum conhecido foi confundido com outra pessoa; os erros são conhecidos rejeitados e desconhecidos aceitos.
-- **Limitações.** O LFW tem composição desbalanceada e fotos de imprensa; só 31 identidades de teste; uma semente e uma divisão; não foi testado fine-tuning das camadas internas; outros modelos (MobileFaceNet, ResNet pequena) não foram comparados; o dataset privado ainda não foi avaliado.
+- **Limitações.** O LFW tem composição desbalanceada e fotos de imprensa; só 31 identidades de teste; uma semente e uma divisão; não foi testado fine-tuning das camadas internas; outros modelos (MobileFaceNet, ResNet pequena) não foram comparados; o dataset privado foi avaliado só de forma agregada e em pequena escala (seção "Avaliação com dados privados", abaixo).
 - **Custo e complexidade.** O custo está em extrair os embeddings (feito uma vez, em CPU, com cache); treinar a camada é leve: o E03 inteiro (30 épocas para cada uma das duas perdas, mais as avaliações) levou 131 s em CPU, com 2 threads. O baseline é o mais simples e o melhor, então é o escolhido.
+
+## Avaliação com dados privados (agregada)
+
+Avaliação pequena da aplicação com fotos novas de participantes adultos que assinaram o Termo de Consentimento. Os dados ficam só no computador local; aqui entram apenas totais, sem identificar ninguém. A configuração é a da Parte 1, sem recalibrar: FaceNet (VGGFace2) sem treino extra, protótipo, cosseno e threshold 0.716.
+
+**Procedimento.** Os participantes foram cadastrados pela interface (3 a 10 fotos cada). Depois foram testadas fotos novas de pessoas cadastradas, com variação de iluminação (forte e fraca), ângulo (de frente e de lado), distância (perto e longe) e expressão (sorrindo), e fotos de rostos gerados por IA (pessoas que não existem), usadas como pessoas não cadastradas.
+
+| Grupo | Fotos testadas | Resultado | Similaridade (mín. / média / máx.) |
+|---|---|---|---|
+| Pessoas cadastradas | 11 | 11 identificadas corretamente (100%); 0 confundidas com outra pessoa; 0 rejeitadas | 0.74 / 0.82 / 0.86 |
+| Não cadastradas (rostos gerados por IA) | 2 | 0 aceitas por engano (FAR 0 de 2); as 2 foram classificadas como desconhecidas | 0.21 / 0.35 / 0.48 |
+
+As menores similaridades entre as pessoas cadastradas (0.74 e 0.76) ocorreram em fotos de lado e em uma foto de frente e de longe, o que deixa pouca margem sobre o threshold de 0.716. Nas fotos de frente e de perto a similaridade ficou entre 0.84 e 0.86.
+
+**Limitações.** São poucas fotos e poucos participantes, então o resultado é indicativo e não permite estimar as taxas de erro com precisão. Em especial, o teste com pessoas não cadastradas tem só 2 fotos de rostos gerados por IA: o FAR de 0 de 2 não prova que o sistema recusa pessoas reais desconhecidas. O threshold continua calibrado no LFW e deve ser recalibrado se a câmera ou o ambiente mudarem.
 
 ## Parte 2: aplicação
 
@@ -194,7 +209,7 @@ Threshold, parâmetros de qualidade e caminhos ficam em `configs/app.yaml`: muda
 - Estatísticas de uso do Streamlit desativadas (`.streamlit/config.toml`).
 
 ### Limitações
-O threshold foi calibrado no LFW (fotos de imprensa); com câmera real a distribuição de similaridades pode mudar, então ele deve ser recalibrado com fotos reais de quem for usar (por isso a interface mostra a similaridade). Não há detecção de vivacidade: uma foto de uma foto pode ser aceita. O desempenho com dados privados não foi medido em escala.
+O threshold foi calibrado no LFW (fotos de imprensa); com câmera real a distribuição de similaridades pode mudar, então ele deve ser recalibrado com fotos reais de quem for usar (por isso a interface mostra a similaridade). Não há detecção de vivacidade: uma foto de uma foto pode ser aceita. O desempenho com dados privados foi medido só em pequena escala (seção "Avaliação com dados privados").
 
 ## Desenvolvimento
 Spec-Driven Development: requisitos e criterios de aceitacao em `docs/specs/`,
